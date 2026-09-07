@@ -1,0 +1,2 @@
+"""Genshin sorter app package."""
+

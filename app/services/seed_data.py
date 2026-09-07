@@ -1,0 +1,30 @@
+from __future__ import annotations
+
+CHARACTER_SEEDS = [
+    {"name": "Albedo", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Albedo.png", "element": "Geo", "rarity": 5},
+    {"name": "Barbara", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Barbara.png", "element": "Hydro", "rarity": 4},
+    {"name": "Bennett", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Bennett.png", "element": "Pyro", "rarity": 4},
+    {"name": "Chongyun", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Chongyun.png", "element": "Cryo", "rarity": 4},
+    {"name": "Diluc", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Diluc.png", "element": "Pyro", "rarity": 5},
+    {"name": "Diona", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Diona.png", "element": "Cryo", "rarity": 4},
+    {"name": "Eula", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Eula.png", "element": "Cryo", "rarity": 5},
+    {"name": "Fischl", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Fischl.png", "element": "Electro", "rarity": 4},
+    {"name": "Ganyu", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Ganyu.png", "element": "Cryo", "rarity": 5},
+    {"name": "Kaeya", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Kaeya.png", "element": "Cryo", "rarity": 4},
+    {"name": "Klee", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Klee.png", "element": "Pyro", "rarity": 5},
+    {"name": "Lisa", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Lisa.png", "element": "Electro", "rarity": 4},
+    {"name": "Mona", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Mona.png", "element": "Hydro", "rarity": 5},
+    {"name": "Nahida", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Nahida.png", "element": "Dendro", "rarity": 5},
+    {"name": "Qiqi", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Qiqi.png", "element": "Cryo", "rarity": 5},
+    {"name": "Razor", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Razor.png", "element": "Electro", "rarity": 4},
+    {"name": "Sucrose", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Sucrose.png", "element": "Anemo", "rarity": 4},
+    {"name": "Venti", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Venti.png", "element": "Anemo", "rarity": 5},
+    {"name": "Xiangling", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Xiangling.png", "element": "Pyro", "rarity": 4},
+    {"name": "Xingqiu", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Xingqiu.png", "element": "Hydro", "rarity": 4},
+    {"name": "Xinyan", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Xinyan.png", "element": "Pyro", "rarity": 4},
+    {"name": "Yoimiya", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Yoimiya.png", "element": "Pyro", "rarity": 5},
+    {"name": "Zhongli", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Zhongli.png", "element": "Geo", "rarity": 5},
+    {"name": "Hu Tao", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Hutao.png", "element": "Pyro", "rarity": 5},
+    {"name": "Tartaglia", "avatar_url": "http://upload-bbs.mihoyo.com/game_record/genshin/character_icon/UI_AvatarIcon_Tartaglia.png", "element": "Hydro", "rarity": 5},
+]
+

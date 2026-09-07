@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>提瓦特心选</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="/static/css/app.css" />
+  </head>
+  <body class="min-h-screen text-slate-100">
+    <div class="page-backdrop"></div>
+    <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
+
+    <header class="topbar-shell">
+      <div class="topbar-copy">
+        <div class="eyebrow">Teyvat Choice</div>
+        <h1>提瓦特心选</h1>
+        <p>登录后开始二选一。每一次选择都只保留一个角色，直到最后留下你的本命。</p>
+      </div>
+      <div class="topbar-meta">
+        <div id="backendBadge" class="status-pill">连接中</div>
+        <div id="userChip" class="status-pill">未登录</div>
+        <div class="icon-belt" aria-hidden="true">
+          <span class="icon-badge"><span class="icon-slot" data-icon="sparkles"></span></span>
+          <span class="icon-badge"><span class="icon-slot" data-icon="crown"></span></span>
+          <span class="icon-badge"><span class="icon-slot" data-icon="trophy"></span></span>
+        </div>
+        <button id="logoutBtn" class="soft-button">
+          <span class="icon-slot icon-inline" data-icon="log-out"></span>
+          <span>退出</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="app-shell">
+      <aside class="sidebar-panel panel">
+        <div class="brand-row">
+          <div class="brand-mark">GS</div>
+          <div class="min-w-0">
+            <div class="eyebrow">角色印象评选</div>
+            <div class="brand-title">提瓦特心选</div>
+          </div>
+        </div>
+        <p class="sidebar-copy">
+          每局会随机抽一道题，再从角色池里不断二选一，直到最后只剩一个最符合题目的角色。
+        </p>
+
+        <div class="sidebar-stack">
+          <section class="panel soft-panel">
+            <div class="section-head">
+              <div>
+                <h2 class="section-title">登录 / 注册</h2>
+                <p class="section-note">用户名和等级会写入数据库</p>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <input id="usernameInput" class="panel-input" placeholder="用户名" />
+              <input id="passwordInput" type="password" class="panel-input" placeholder="密码" />
+            </div>
+            <div class="button-row">
+              <button id="registerBtn" class="action-button action-register flex-1">
+                <span class="icon-slot icon-inline" data-icon="sparkles"></span>
+                <span>注册</span>
+              </button>
+              <button id="loginBtn" class="action-button action-login flex-1">
+                <span class="icon-slot icon-inline" data-icon="log-in"></span>
+                <span>登录</span>
+              </button>
+            </div>
+            <div id="authMsg" class="mt-3 text-sm text-slate-300"></div>
+          </section>
+
+          <section class="panel soft-panel">
+            <div class="section-head">
+              <div>
+                <h2 class="section-title">开始前</h2>
+                <p id="introLine" class="section-note">先登录或注册，再点开始。</p>
+              </div>
+            </div>
+            <button id="startBtn" class="action-button action-start w-full">
+              <span class="icon-slot icon-inline" data-icon="sparkles"></span>
+              <span>开始</span>
+            </button>
+          </section>
+
+          <section class="panel soft-panel">
+            <div class="section-head">
+              <div>
+                <h2 class="section-title">流程</h2>
+                <p class="section-note">按照这个顺序进行</p>
+              </div>
+            </div>
+            <div class="phase-list">
+              <div class="phase-item">
+                <span class="phase-index">1</span>
+                <div>
+                  <div class="phase-title">登录 / 注册</div>
+                  <div class="phase-desc">先建立当前用户记录</div>
+                </div>
+              </div>
+              <div class="phase-item">
+                <span class="phase-index">2</span>
+                <div>
+                  <div class="phase-title">点击开始</div>
+                  <div class="phase-desc">随机抽出两位角色</div>
+                </div>
+              </div>
+              <div class="phase-item">
+                <span class="phase-index">3</span>
+                <div>
+                  <div class="phase-title">二选一淘汰</div>
+                  <div class="phase-desc">入选者继续，另一位出局</div>
+                </div>
+              </div>
+              <div class="phase-item">
+                <span class="phase-index">4</span>
+                <div>
+                  <div class="phase-title">自动结算</div>
+                  <div class="phase-desc">最后显示最终角色和榜单</div>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </aside>
+
+      <main class="content-stack">
+        <section class="panel panel-hero">
+          <div class="section-head">
+            <div>
+              <div class="section-icon"><span class="icon-slot" data-icon="sparkles"></span></div>
+              <div class="eyebrow">本局题目</div>
+              <h2 class="section-title">你更喜欢哪一种？</h2>
+            </div>
+            <div id="questionBadge" class="status-pill">等待开始</div>
+          </div>
+          <p id="questionPrompt" class="question-prompt">点击开始后会随机抽取一道题。</p>
+          <p class="section-note">每次开始都会换题，题库以后也可以继续扩充。</p>
+        </section>
+
+        <section id="championSpotlight" class="panel panel-hero hidden">
+          <div class="section-head">
+            <div>
+              <div class="section-icon"><span class="icon-slot" data-icon="crown"></span></div>
+              <div class="eyebrow">当前领先</div>
+              <h2 class="section-title">领先角色</h2>
+            </div>
+            <div id="championSpotlightMeta" class="status-pill">等待开始</div>
+          </div>
+          <div class="spotlight-body">
+            <img id="championSpotlightAvatar" class="champion-avatar" alt="" />
+            <div class="spotlight-copy">
+              <div id="championSpotlightName" class="spotlight-name"></div>
+              <p id="championSpotlightLine" class="section-note"></p>
+            </div>
+          </div>
+        </section>
+
+        <section id="choiceSection" class="hidden panel">
+          <div class="section-head">
+            <div>
+              <h2 class="section-title">这一轮</h2>
+              <p id="statusLine" class="section-note">尚未开始</p>
+            </div>
+            <div id="battleMeta" class="section-note text-right"></div>
+          </div>
+
+          <div class="choice-grid">
+            <button id="leftCard" class="choice-card text-left" type="button">
+              <img id="leftAvatar" class="choice-avatar" alt="" />
+              <div class="choice-copy">
+                <h3 id="leftName" class="choice-name"></h3>
+              </div>
+            </button>
+
+            <button id="rightCard" class="choice-card text-left" type="button">
+              <img id="rightAvatar" class="choice-avatar" alt="" />
+              <div class="choice-copy">
+                <h3 id="rightName" class="choice-name"></h3>
+              </div>
+            </button>
+          </div>
+
+          <div id="winnerBanner" class="mt-4 hidden winner-banner"></div>
+        </section>
+
+        <section id="eliminatedSection" class="hidden panel">
+          <div class="section-head">
+            <div>
+              <h2 class="section-title">已出局</h2>
+              <p class="section-note">本局里已经离开的角色</p>
+            </div>
+          </div>
+          <div id="eliminatedList" class="eliminated-list"></div>
+        </section>
+      </main>
+
+      <aside id="summaryPanel" class="hidden summary-rail">
+        <section id="summaryCard" class="panel panel-summary">
+          <div class="section-head">
+            <div>
+              <div class="section-icon"><span class="icon-slot" data-icon="trophy"></span></div>
+              <div class="eyebrow">最终结算</div>
+              <h2 class="section-title">答完后自动展示结果</h2>
+            </div>
+          </div>
+
+          <div class="summary-user-card">
+            <div class="summary-label">用户</div>
+            <div id="summaryUser" class="summary-value"></div>
+          </div>
+
+          <div class="summary-question-card">
+            <div class="summary-label">本局题目</div>
+            <div id="summaryQuestion" class="summary-question-text"></div>
+          </div>
+
+          <div class="summary-champion-card">
+            <div class="summary-label summary-label-accent">最终胜者</div>
+            <div class="summary-champion-row">
+              <img id="summaryChampionAvatar" class="summary-champion-avatar" alt="" />
+              <div class="min-w-0">
+                <div id="summaryChampion" class="summary-champion-name"></div>
+                <div id="summaryChampionMeta" class="summary-champion-meta"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="summary-table-wrap">
+            <div class="summary-table-title">每个角色的最终胜利次数</div>
+            <div class="summary-table-scroll">
+              <table class="summary-table">
+                <thead>
+                  <tr>
+                    <th>角色</th>
+                    <th class="text-right">最终胜利次数</th>
+                  </tr>
+                </thead>
+                <tbody id="championshipBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </div>
+
+    <script type="module" src="/static/js/app.js"></script>
+  </body>
+</html>
