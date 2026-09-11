@@ -351,8 +351,8 @@ function renderSpotlight() {
   if (!state.champion) {
     elements.championSpotlightMeta.textContent = "等待开始";
     elements.championSpotlightAvatar.removeAttribute("src");
-    elements.championSpotlightName.textContent = "尚未出现保留角色";
-    elements.championSpotlightLine.textContent = "开始后，当前选择会留在这里。";
+    elements.championSpotlightName.textContent = "尚未有保留角色";
+    elements.championSpotlightLine.textContent = "开始后，当前保留的角色会显示在这里。";
     return;
   }
 
@@ -361,7 +361,7 @@ function renderSpotlight() {
   elements.championSpotlightAvatar.alt = state.champion.name;
   elements.championSpotlightName.textContent = state.champion.name;
   elements.championSpotlightLine.textContent = state.completed
-    ? "这是你在这道题下最后留下的角色。"
+    ? "这是你在这道题下最后保留的角色。"
     : "下一位角色会继续和它比较。";
 }
 
@@ -719,7 +719,7 @@ async function choose(side) {
       clearGameState();
       elements.winnerBanner.classList.remove("hidden");
       elements.winnerBanner.innerHTML = `
-        <div class="text-lg font-semibold">${escapeHtml(winner.name)} 是你在这道题下最后留下的角色</div>
+        <div class="text-lg font-semibold">${escapeHtml(winner.name)} 是你在这道题下最后保留的角色</div>
         <div class="mt-1 text-sm">这一局已经完成，可以把同一局分享给朋友。</div>
       `;
       confettiFx({
