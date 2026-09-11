@@ -11,6 +11,7 @@ from app.core.config import settings
 import app.db.session as db_session
 from app.routers.auth import router as auth_router
 from app.routers.battle import router as battle_router
+from app.routers.challenges import router as challenges_router
 from app.routers.ranking import router as ranking_router
 from app.services.seed_service import seed_characters
 from app.db.session import session_scope
@@ -33,6 +34,7 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.include_router(auth_router)
 app.include_router(battle_router)
+app.include_router(challenges_router)
 app.include_router(ranking_router)
 
 

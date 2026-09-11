@@ -16,7 +16,7 @@
       <div class="topbar-copy">
         <div class="eyebrow">Teyvat Choice</div>
         <h1>提瓦特心选</h1>
-        <p>登录后开始二选一。每一次选择都只保留一个角色，直到最后留下你的本命。</p>
+        <p>选择一种玩法，留下你在这道题下最想选出的角色，或者来一局证件照猜角色。</p>
       </div>
       <div class="topbar-meta">
         <div id="backendBadge" class="status-pill">连接中</div>
@@ -24,7 +24,6 @@
         <div class="icon-belt" aria-hidden="true">
           <span class="icon-badge"><span class="icon-slot" data-icon="sparkles"></span></span>
           <span class="icon-badge"><span class="icon-slot" data-icon="crown"></span></span>
-          <span class="icon-badge"><span class="icon-slot" data-icon="trophy"></span></span>
         </div>
         <button id="logoutBtn" class="soft-button">
           <span class="icon-slot icon-inline" data-icon="log-out"></span>
@@ -43,7 +42,7 @@
           </div>
         </div>
         <p class="sidebar-copy">
-          每局会随机抽一道题，再从角色池里不断二选一，直到最后只剩一个最符合题目的角色。
+          你可以选择一局短小的心选对决，也可以把提瓦特角色变成剪影，试着认出他们。
         </p>
 
         <div class="sidebar-stack">
@@ -51,7 +50,7 @@
             <div class="section-head">
               <div>
                 <h2 class="section-title">登录 / 注册</h2>
-                <p class="section-note">用户名和等级会写入数据库</p>
+                <p class="section-note">游客也可以直接开始，登录后会保存等级</p>
               </div>
             </div>
 
@@ -75,8 +74,45 @@
           <section class="panel soft-panel">
             <div class="section-head">
               <div>
+                <h2 class="section-title">选择玩法</h2>
+                <p id="modeDescription" class="section-note">短局开始，八位角色很快就能选出结果。</p>
+              </div>
+            </div>
+            <div id="modeOptions" class="mode-options" role="group" aria-label="选择玩法">
+              <button class="mode-option is-selected" type="button" data-mode="quick" aria-pressed="true">
+                <span class="mode-option-title">快速心选</span>
+                <span class="mode-option-note">8 位角色</span>
+              </button>
+              <button class="mode-option" type="button" data-mode="standard" aria-pressed="false">
+                <span class="mode-option-title">标准心选</span>
+                <span class="mode-option-note">16 位角色</span>
+              </button>
+              <button class="mode-option" type="button" data-mode="full" aria-pressed="false">
+                <span class="mode-option-title">完整心选</span>
+                <span class="mode-option-note">全部角色</span>
+              </button>
+              <button class="mode-option" type="button" data-mode="guess" aria-pressed="false">
+                <span class="mode-option-title">证件照猜角色</span>
+                <span class="mode-option-note">10 道剪影题</span>
+              </button>
+            </div>
+          </section>
+
+          <section class="panel soft-panel">
+            <div class="section-head">
+              <div>
+                <h2 class="section-title">选择题目</h2>
+                <p id="questionSelectNote" class="section-note">这道题会贯穿本局心选。</p>
+              </div>
+            </div>
+            <select id="questionSelect" class="panel-input question-select" aria-label="选择题目"></select>
+          </section>
+
+          <section class="panel soft-panel">
+            <div class="section-head">
+              <div>
                 <h2 class="section-title">开始前</h2>
-                <p id="introLine" class="section-note">先登录或注册，再点开始。</p>
+                <p id="introLine" class="section-note">选择好玩法和题目后就可以开始。</p>
               </div>
             </div>
             <button id="startBtn" class="action-button action-start w-full">
@@ -96,29 +132,29 @@
               <div class="phase-item">
                 <span class="phase-index">1</span>
                 <div>
-                  <div class="phase-title">登录 / 注册</div>
-                  <div class="phase-desc">先建立当前用户记录</div>
+                  <div class="phase-title">选择玩法</div>
+                  <div class="phase-desc">快速、标准、完整或猜角色</div>
                 </div>
               </div>
               <div class="phase-item">
                 <span class="phase-index">2</span>
                 <div>
-                  <div class="phase-title">点击开始</div>
-                  <div class="phase-desc">随机抽出两位角色</div>
+                  <div class="phase-title">选择题目</div>
+                  <div class="phase-desc">心选模式选择一道明确的问题</div>
                 </div>
               </div>
               <div class="phase-item">
                 <span class="phase-index">3</span>
                 <div>
-                  <div class="phase-title">二选一淘汰</div>
-                  <div class="phase-desc">入选者继续，另一位出局</div>
+                  <div class="phase-title">开始游戏</div>
+                  <div class="phase-desc">心选二选一，或看剪影猜角色</div>
                 </div>
               </div>
               <div class="phase-item">
                 <span class="phase-index">4</span>
                 <div>
-                  <div class="phase-title">自动结算</div>
-                  <div class="phase-desc">最后显示最终角色和榜单</div>
+                  <div class="phase-title">分享挑战</div>
+                  <div class="phase-desc">完成后可以复制同一局的邀请链接</div>
                 </div>
               </div>
             </div>
@@ -132,12 +168,12 @@
             <div>
               <div class="section-icon"><span class="icon-slot" data-icon="sparkles"></span></div>
               <div class="eyebrow">本局题目</div>
-              <h2 class="section-title">你更喜欢哪一种？</h2>
+              <h2 id="heroTitle" class="section-title">你更喜欢哪一种？</h2>
             </div>
             <div id="questionBadge" class="status-pill">等待开始</div>
           </div>
-          <p id="questionPrompt" class="question-prompt">点击开始后会随机抽取一道题。</p>
-          <p class="section-note">每次开始都会换题，题库以后也可以继续扩充。</p>
+          <p id="questionPrompt" class="question-prompt">先选择玩法和题目。</p>
+          <p id="challengeHint" class="section-note"></p>
         </section>
 
         <section id="championSpotlight" class="panel panel-hero hidden">
@@ -186,6 +222,24 @@
           <div id="winnerBanner" class="mt-4 hidden winner-banner"></div>
         </section>
 
+        <section id="guessSection" class="hidden panel">
+          <div class="section-head">
+            <div>
+              <h2 class="section-title">证件照猜角色</h2>
+              <p id="guessRoundLabel" class="section-note">准备开始</p>
+            </div>
+            <div id="guessFeedback" class="section-note text-right"></div>
+          </div>
+
+          <div class="guess-stage">
+            <div class="guess-image-frame">
+              <img id="guessAvatar" class="guess-avatar" alt="角色剪影" />
+            </div>
+            <p class="guess-prompt">这是谁？</p>
+            <div id="guessOptions" class="guess-options"></div>
+          </div>
+        </section>
+
         <section id="eliminatedSection" class="hidden panel">
           <div class="section-head">
             <div>
@@ -201,9 +255,9 @@
         <section id="summaryCard" class="panel panel-summary">
           <div class="section-head">
             <div>
-              <div class="section-icon"><span class="icon-slot" data-icon="trophy"></span></div>
+              <div class="section-icon"><span class="icon-slot" data-icon="sparkles"></span></div>
               <div class="eyebrow">最终结算</div>
-              <h2 class="section-title">答完后自动展示结果</h2>
+              <h2 class="section-title">这一局留下了什么</h2>
             </div>
           </div>
 
@@ -217,7 +271,7 @@
             <div id="summaryQuestion" class="summary-question-text"></div>
           </div>
 
-          <div class="summary-champion-card">
+          <div id="summaryChampionCard" class="summary-champion-card">
             <div class="summary-label summary-label-accent">最终胜者</div>
             <div class="summary-champion-row">
               <img id="summaryChampionAvatar" class="summary-champion-avatar" alt="" />
@@ -228,19 +282,18 @@
             </div>
           </div>
 
-          <div class="summary-table-wrap">
-            <div class="summary-table-title">每个角色的最终胜利次数</div>
-            <div class="summary-table-scroll">
-              <table class="summary-table">
-                <thead>
-                  <tr>
-                    <th>角色</th>
-                    <th class="text-right">最终胜利次数</th>
-                  </tr>
-                </thead>
-                <tbody id="championshipBody"></tbody>
-              </table>
-            </div>
+          <div id="summaryGuessCard" class="summary-question-card hidden">
+            <div class="summary-label summary-label-accent">答题结果</div>
+            <div id="summaryGuessResult" class="summary-question-text"></div>
+          </div>
+
+          <div class="share-challenge-row">
+            <button id="shareChallengeBtn" class="soft-button" type="button">
+              <span class="icon-slot icon-inline" data-icon="party-popper"></span>
+              <span>复制挑战链接</span>
+            </button>
+            <input id="shareChallengeUrl" class="panel-input share-challenge-url" readonly aria-label="挑战链接" />
+            <span id="shareChallengeMsg" class="section-note"></span>
           </div>
         </section>
       </aside>

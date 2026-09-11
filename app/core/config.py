@@ -8,7 +8,7 @@ import os
 @dataclass(slots=True)
 class Settings:
     app_host: str = os.getenv("APP_HOST", "0.0.0.0")
-    app_port: int = int(os.getenv("APP_PORT", "8080"))
+    app_port: int = int(os.getenv("APP_PORT", "18080"))
     app_env: str = os.getenv("APP_ENV", "development")
 
     db_backend: str = os.getenv("DB_BACKEND", "auto").lower()
@@ -41,4 +41,3 @@ class Settings:
 
 
 settings = Settings()
-

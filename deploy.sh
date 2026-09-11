@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-PORT="${PORT:-8080}"
+PORT="${PORT:-18080}"
 HOST="${HOST:-0.0.0.0}"
 DB_BACKEND="${DB_BACKEND:-sqlite}"
 SQLITE_PATH="${SQLITE_PATH:-./data.db}"
