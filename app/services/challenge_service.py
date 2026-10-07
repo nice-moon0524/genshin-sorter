@@ -14,7 +14,11 @@ MODE_CHARACTER_COUNTS: dict[str, int | None] = {
     "standard": 16,
     "full": None,
     "guess": 10,
+    "guess_hard": 10,
 }
+
+GUESS_MODES = {"guess", "guess_hard"}
+GUESS_EXCLUDED_CHARACTERS = {"埃洛伊"}
 
 
 def create_challenge(
@@ -27,6 +31,8 @@ def create_challenge(
         raise ValueError("玩法不存在")
 
     characters = list(session.query(Character).order_by(Character.id.asc()).all())
+    if mode in GUESS_MODES:
+        characters = [item for item in characters if item.name not in GUESS_EXCLUDED_CHARACTERS]
     if len(characters) < 2:
         raise ValueError("角色数量不足，无法创建挑战")
 
@@ -35,7 +41,7 @@ def create_challenge(
     if count is not None:
         characters = characters[: min(count, len(characters))]
 
-    if mode != "guess" and len(characters) < 2:
+    if mode not in GUESS_MODES and len(characters) < 2:
         raise ValueError("角色数量不足，无法创建挑战")
 
     while True:

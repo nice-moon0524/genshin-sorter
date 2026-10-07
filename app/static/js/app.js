@@ -1,5 +1,21 @@
 const TOKEN_KEY = "genshin_sorter_token";
 const SAVE_KEY = "genshin_sorter_state";
+const MUSIC_TRACK_KEY = "genshin_sorter_music_track";
+const MUSIC_VOLUME_KEY = "genshin_sorter_music_volume";
+
+const MUSIC_TRACKS = [
+  { name: "皎洁的笑颜", mood: "Moonlike Smile · HOYO-MiX", src: "/static/music/track-01.ogg" },
+  { name: "让风告诉你", mood: "演唱曲 · Genshin Impact", src: "/static/music/track-02.ogg" },
+  { name: "我不曾忘记", mood: "演唱曲 · Genshin Impact", src: "/static/music/track-03.ogg" },
+  { name: "风的来信", mood: "A Letter From the Wind · HOYO-MiX", src: "/static/music/track-04.ogg" },
+  { name: "献向镜水的月光", mood: "Song to the Mirrored Moon · HOYO-MiX", src: "/static/music/track-05.ogg" },
+  { name: "奥黛塔，快陪我去堆个雪人吧", mood: "Dear Odette, Come and Build a Snowman With Me", src: "/static/music/track-06.ogg" },
+  { name: "白夜洇润", mood: "Unfurling Night · HOYO-MiX", src: "/static/music/track-07.ogg" },
+  { name: "轻涟", mood: "La vaguelette · HOYO-MiX", src: "/static/music/track-08.ogg" },
+  { name: "神女劈观·唤情", mood: "Devastation and Redemption · HOYO-MiX", src: "/static/music/track-09.ogg" },
+  { name: "几初的智愿", mood: "For Riddles, for Wonders · HOYO-MiX", src: "/static/music/track-10.ogg" },
+  { name: "和合大梦的曲调", mood: "Melody of Brave Seeds · HOYO-MiX", src: "/static/music/track-11.ogg" },
+];
 
 const QUESTION_BANK = [
   { id: "funniest", prompt: "你觉得谁最容易让你笑出来？" },
@@ -26,10 +42,22 @@ const QUESTION_BANK = [
   { id: "protective", prompt: "如果遇到危险，你最希望谁来保护你？" },
 ];
 
+function customQuestionId(id) {
+  return `custom_${id}`;
+}
+
 const GUESS_QUESTION = {
   id: "guess_character",
   prompt: "看证件照剪影，猜出这位角色是谁。",
 };
+
+const HARD_GUESS_QUESTION = {
+  id: "guess_character_hard",
+  prompt: "辨认被遮挡 30% 的证件照剪影，猜出这位角色是谁。",
+};
+
+const GUESS_MODES = new Set(["guess", "guess_hard"]);
+const GUESS_EXCLUDED_NAMES = new Set(["埃洛伊"]);
 
 const MODE_META = {
   quick: {
@@ -52,10 +80,28 @@ const MODE_META = {
     description: "十道角色剪影题，看看你能认出多少位。",
     questionNote: "这个玩法不需要选择主题题目。",
   },
+  guess_hard: {
+    label: "困难剪影挑战",
+    description: "剪影会随机遮挡 30%，辨认角色会更有挑战。",
+    questionNote: "困难版会为同一挑战固定遮挡位置。",
+  },
 };
 
 const ICON_CACHE = new Map();
 const SILHOUETTE_CACHE = new Map();
+
+const savedMusicTrack = Number.parseInt(localStorage.getItem(MUSIC_TRACK_KEY) || "0", 10);
+const savedMusicVolume = Number.parseInt(localStorage.getItem(MUSIC_VOLUME_KEY) || "58", 10);
+
+const musicState = {
+  audio: null,
+  trackIndex: Number.isInteger(savedMusicTrack) && savedMusicTrack >= 0 && savedMusicTrack < MUSIC_TRACKS.length
+    ? savedMusicTrack
+    : 0,
+  volume: Number.isInteger(savedMusicVolume) ? Math.min(100, Math.max(0, savedMusicVolume)) : 42,
+  playing: false,
+  panelOpen: false,
+};
 
 const state = {
   token: localStorage.getItem(TOKEN_KEY) || "",
@@ -74,6 +120,9 @@ const state = {
   guessIndex: 0,
   guessCorrect: 0,
   guessFeedback: "",
+  notes: {},
+  gameCharacters: [],
+  questionSubmitting: false,
   busy: false,
   started: false,
   completed: false,
@@ -90,10 +139,32 @@ const elements = {
   loginBtn: $("loginBtn"),
   registerBtn: $("registerBtn"),
   logoutBtn: $("logoutBtn"),
+  musicDiscBtn: $("musicDiscBtn"),
+  musicPlayBtn: $("musicPlayBtn"),
+  musicPlayIcon: $("musicPlayIcon"),
+  musicPanel: $("musicPanel"),
+  musicCloseBtn: $("musicCloseBtn"),
+  musicPanelDisc: $("musicPanelDisc"),
+  musicTrackName: $("musicTrackName"),
+  musicTrackMood: $("musicTrackMood"),
+  musicEqualizer: $("musicEqualizer"),
+  musicPrevBtn: $("musicPrevBtn"),
+  musicPanelPlayBtn: $("musicPanelPlayBtn"),
+  musicPanelPlayIcon: $("musicPanelPlayIcon"),
+  musicNextBtn: $("musicNextBtn"),
+  musicVolume: $("musicVolume"),
+  musicProgress: $("musicProgress"),
+  musicCurrentTime: $("musicCurrentTime"),
+  musicDuration: $("musicDuration"),
+  musicPlaylist: $("musicPlaylist"),
   modeOptions: [...document.querySelectorAll("[data-mode]")],
   modeDescription: $("modeDescription"),
   questionSelect: $("questionSelect"),
   questionSelectNote: $("questionSelectNote"),
+  customQuestionPanel: $("customQuestionPanel"),
+  customQuestionInput: $("customQuestionInput"),
+  addQuestionBtn: $("addQuestionBtn"),
+  customQuestionMsg: $("customQuestionMsg"),
   introLine: $("introLine"),
   startBtn: $("startBtn"),
   questionBadge: $("questionBadge"),
@@ -116,9 +187,12 @@ const elements = {
   rightAvatar: $("rightAvatar"),
   leftName: $("leftName"),
   rightName: $("rightName"),
+  leftNote: $("leftNote"),
+  rightNote: $("rightNote"),
   winnerBanner: $("winnerBanner"),
   eliminatedList: $("eliminatedList"),
   guessRoundLabel: $("guessRoundLabel"),
+  guessTitle: $("guessTitle"),
   guessFeedback: $("guessFeedback"),
   guessAvatar: $("guessAvatar"),
   guessOptions: $("guessOptions"),
@@ -134,6 +208,10 @@ const elements = {
   shareChallengeBtn: $("shareChallengeBtn"),
   shareChallengeUrl: $("shareChallengeUrl"),
   shareChallengeMsg: $("shareChallengeMsg"),
+  exportRecordPanel: $("exportRecordPanel"),
+  exportImageBtn: $("exportImageBtn"),
+  exportCsvBtn: $("exportCsvBtn"),
+  exportRecordMsg: $("exportRecordMsg"),
   confettiCanvas: $("confetti-canvas"),
 };
 
@@ -179,19 +257,29 @@ function seededRandom(seed) {
   };
 }
 
-function isGuessMode() {
-  return state.mode === "guess";
+function isGuessMode(mode = state.mode) {
+  return GUESS_MODES.has(mode);
+}
+
+function isHardGuessMode(mode = state.mode) {
+  return mode === "guess_hard";
+}
+
+function questionForMode(mode) {
+  if (mode === "guess_hard") return HARD_GUESS_QUESTION;
+  if (mode === "guess") return GUESS_QUESTION;
+  return null;
 }
 
 function selectedQuestion() {
-  if (isGuessMode()) return GUESS_QUESTION;
+  if (isGuessMode()) return questionForMode(state.mode);
   return QUESTION_BANK.find((item) => item.id === elements.questionSelect.value) || QUESTION_BANK[0];
 }
 
 function setMode(mode) {
   if (!MODE_META[mode]) return;
   state.mode = mode;
-  state.question = isGuessMode() ? GUESS_QUESTION : selectedQuestion();
+  state.question = isGuessMode() ? questionForMode(mode) : selectedQuestion();
   renderSetup();
   renderQuestion();
 }
@@ -201,7 +289,7 @@ function fillQuestionOptions() {
   for (const question of QUESTION_BANK) {
     const option = document.createElement("option");
     option.value = question.id;
-    option.textContent = question.prompt;
+    option.textContent = question.custom ? `[自定义] ${question.prompt}` : question.prompt;
     elements.questionSelect.appendChild(option);
   }
   elements.questionSelect.value = state.question.id;
@@ -212,8 +300,15 @@ function renderSetup() {
   elements.modeDescription.textContent = meta.description;
   elements.questionSelectNote.textContent = meta.questionNote;
   elements.questionSelect.disabled = isGuessMode() || Boolean(state.pendingChallenge);
+  elements.customQuestionPanel.classList.toggle("hidden", isGuessMode() || Boolean(state.pendingChallenge));
+  elements.customQuestionInput.disabled = state.questionSubmitting || state.busy || Boolean(state.pendingChallenge);
+  elements.addQuestionBtn.disabled = state.questionSubmitting || state.busy || Boolean(state.pendingChallenge);
   elements.questionSelect.value = state.question?.id || QUESTION_BANK[0].id;
-  elements.heroTitle.textContent = isGuessMode() ? "看证件照，猜出角色" : "你更喜欢哪一种？";
+  elements.heroTitle.textContent = isHardGuessMode()
+    ? "残缺的剪影，你还能认出吗？"
+    : isGuessMode()
+      ? "看证件照，猜出角色"
+      : "你更喜欢哪一种？";
 
   for (const button of elements.modeOptions) {
     const active = button.dataset.mode === state.mode;
@@ -250,6 +345,8 @@ function saveGameState() {
       guessItems: state.guessItems.map((item) => item.id),
       guessIndex: state.guessIndex,
       guessCorrect: state.guessCorrect,
+      notes: state.notes,
+      gameCharacters: state.gameCharacters.map((item) => item.id),
     }),
   );
 }
@@ -299,6 +396,123 @@ async function hydrateIcons() {
   );
 }
 
+async function setIcon(node, name) {
+  const svg = await loadIcon(name);
+  if (svg) node.innerHTML = svg;
+}
+
+function ensureAudioTrack() {
+  const track = MUSIC_TRACKS[musicState.trackIndex];
+  if (!musicState.audio) {
+    musicState.audio = new Audio();
+    musicState.audio.preload = "metadata";
+    musicState.audio.addEventListener("ended", () => {
+      selectMusicTrack(musicState.trackIndex + 1, true);
+    });
+    musicState.audio.addEventListener("timeupdate", updateMusicProgress);
+    musicState.audio.addEventListener("loadedmetadata", updateMusicProgress);
+    musicState.audio.addEventListener("error", () => {
+      musicState.playing = false;
+      renderMusicPlayer();
+    });
+  }
+  if (musicState.audio.src !== new URL(track.src, window.location.href).href) {
+    musicState.audio.src = track.src;
+    musicState.audio.load();
+  }
+  musicState.audio.volume = musicState.volume / 100;
+}
+
+function formatMusicTime(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60).toString().padStart(2, "0");
+  return `${minutes}:${remainingSeconds}`;
+}
+
+function updateMusicProgress() {
+  const audio = musicState.audio;
+  const duration = Number.isFinite(audio?.duration) ? audio.duration : 0;
+  const currentTime = Number.isFinite(audio?.currentTime) ? audio.currentTime : 0;
+  elements.musicProgress.max = String(duration);
+  elements.musicProgress.value = String(Math.min(currentTime, duration || 0));
+  elements.musicCurrentTime.textContent = formatMusicTime(currentTime);
+  elements.musicDuration.textContent = formatMusicTime(duration);
+}
+
+function renderMusicPlayer() {
+  const track = MUSIC_TRACKS[musicState.trackIndex];
+  ensureAudioTrack();
+  elements.musicTrackName.textContent = track.name;
+  elements.musicTrackMood.textContent = track.mood;
+  elements.musicVolume.value = String(musicState.volume);
+  updateMusicProgress();
+  elements.musicPanel.classList.toggle("hidden", !musicState.panelOpen);
+  elements.musicPanel.setAttribute("aria-hidden", String(!musicState.panelOpen));
+  elements.musicDiscBtn.setAttribute("aria-expanded", String(musicState.panelOpen));
+  elements.musicDiscBtn.classList.toggle("is-playing", musicState.playing);
+  elements.musicPanelDisc.classList.toggle("is-playing", musicState.playing);
+  elements.musicEqualizer.classList.toggle("is-playing", musicState.playing);
+
+  const iconName = musicState.playing ? "pause" : "play";
+  const label = musicState.playing ? "暂停音乐" : "播放音乐";
+  elements.musicPlayBtn.setAttribute("aria-label", label);
+  elements.musicPlayBtn.title = label;
+  elements.musicPanelPlayBtn.setAttribute("aria-label", label);
+  elements.musicPanelPlayBtn.title = label;
+  setIcon(elements.musicPlayIcon, iconName).catch(() => {});
+  setIcon(elements.musicPanelPlayIcon, iconName).catch(() => {});
+
+  elements.musicPlaylist.innerHTML = MUSIC_TRACKS.map(
+    (item, index) => `
+      <button class="music-track-button ${index === musicState.trackIndex ? "is-active" : ""}" type="button" data-music-track="${index}">
+        <span class="music-track-number">${String(index + 1).padStart(2, "0")}</span>
+        <span class="music-track-button-copy">
+          <span class="music-track-button-name">${escapeHtml(item.name)}</span>
+          <span class="music-track-button-mood">${escapeHtml(item.mood)}</span>
+        </span>
+      </button>
+    `,
+  ).join("");
+  elements.musicPlaylist.querySelectorAll("[data-music-track]").forEach((button) => {
+    button.addEventListener("click", () => selectMusicTrack(Number(button.dataset.musicTrack)));
+  });
+}
+
+async function playMusic() {
+  ensureAudioTrack();
+  if (!musicState.audio) return;
+  await musicState.audio.play();
+  musicState.playing = true;
+  renderMusicPlayer();
+}
+
+function pauseMusic() {
+  musicState.playing = false;
+  musicState.audio?.pause();
+  renderMusicPlayer();
+}
+
+function toggleMusic() {
+  if (musicState.playing) pauseMusic();
+  else playMusic().catch(() => {});
+}
+
+function selectMusicTrack(index, autoplay = false) {
+  const wasPlaying = musicState.playing;
+  musicState.trackIndex = (index + MUSIC_TRACKS.length) % MUSIC_TRACKS.length;
+  localStorage.setItem(MUSIC_TRACK_KEY, String(musicState.trackIndex));
+  ensureAudioTrack();
+  musicState.audio.currentTime = 0;
+  if (wasPlaying || autoplay) playMusic().catch(() => {});
+  else renderMusicPlayer();
+}
+
+function setMusicPanel(open) {
+  musicState.panelOpen = open;
+  renderMusicPlayer();
+}
+
 function backendLabel(value) {
   if (value === "mysql") return "MySQL 在线";
   if (value === "sqlite") return "SQLite 本地";
@@ -312,6 +526,7 @@ function renderBackend() {
 
 function renderUser() {
   elements.userChip.textContent = state.user ? `用户：${state.user.username}` : "游客";
+  elements.customQuestionInput.placeholder = state.user ? "输入新的心选题目" : "登录后可添加自定义题目";
 }
 
 function renderPlaceholderCard(img, nameEl) {
@@ -376,8 +591,11 @@ function renderBattle() {
   elements.eliminatedSection.classList.toggle("hidden", !showProgress);
   elements.summaryPanel.classList.toggle("hidden", !state.completed);
   elements.startBtn.disabled = state.busy;
-  elements.leftCard.disabled = state.busy || !showChoices || !state.champion || !state.challenger;
-  elements.rightCard.disabled = state.busy || !showChoices || !state.champion || !state.challenger;
+  const cardsDisabled = state.busy || !showChoices || !state.champion || !state.challenger;
+  elements.leftCard.classList.toggle("is-disabled", cardsDisabled);
+  elements.rightCard.classList.toggle("is-disabled", cardsDisabled);
+  elements.leftCard.setAttribute("aria-disabled", String(cardsDisabled));
+  elements.rightCard.setAttribute("aria-disabled", String(cardsDisabled));
   elements.startBtn.textContent = state.started && !state.completed
     ? "重新开始"
     : state.pendingChallenge
@@ -389,6 +607,8 @@ function renderBattle() {
     elements.battleMeta.textContent = "先选择玩法";
     renderPlaceholderCard(elements.leftAvatar, elements.leftName);
     renderPlaceholderCard(elements.rightAvatar, elements.rightName);
+    renderChoiceNote(elements.leftNote, null);
+    renderChoiceNote(elements.rightNote, null);
     elements.guessAvatar.removeAttribute("src");
     renderSpotlight();
     return;
@@ -399,6 +619,8 @@ function renderBattle() {
     elements.battleMeta.textContent = "可以重新开始或分享这一局";
     renderPlaceholderCard(elements.leftAvatar, elements.leftName);
     renderPlaceholderCard(elements.rightAvatar, elements.rightName);
+    renderChoiceNote(elements.leftNote, null);
+    renderChoiceNote(elements.rightNote, null);
     elements.guessAvatar.removeAttribute("src");
     renderSpotlight();
     return;
@@ -415,7 +637,15 @@ function renderBattle() {
   elements.battleMeta.textContent = state.busy ? "正在整理结果" : "选择你认为更符合题目的角色";
   fillCard(elements.leftAvatar, elements.leftName, state.champion);
   fillCard(elements.rightAvatar, elements.rightName, state.challenger);
+  renderChoiceNote(elements.leftNote, state.champion);
+  renderChoiceNote(elements.rightNote, state.challenger);
   renderSpotlight();
+}
+
+function renderChoiceNote(noteElement, character) {
+  noteElement.value = character ? state.notes[character.id] || "" : "";
+  noteElement.disabled = !character || state.busy;
+  noteElement.dataset.characterId = character ? String(character.id) : "";
 }
 
 function renderEliminated() {
@@ -450,6 +680,8 @@ function renderSummary() {
     elements.summaryGuessCard.classList.add("hidden");
     elements.shareChallengeUrl.value = "";
     elements.shareChallengeMsg.textContent = "";
+    elements.exportRecordPanel.classList.add("hidden");
+    elements.exportRecordMsg.textContent = "";
     return;
   }
 
@@ -457,6 +689,7 @@ function renderSummary() {
   elements.summaryQuestion.textContent = state.question?.prompt || "";
   elements.shareChallengeUrl.value = challengeUrl();
   elements.shareChallengeBtn.disabled = !state.challengeCode;
+  elements.exportRecordPanel.classList.toggle("hidden", isGuessMode());
 
   if (isGuessMode()) {
     elements.summaryChampionCard.classList.add("hidden");
@@ -469,6 +702,165 @@ function renderSummary() {
     elements.summaryChampionAvatar.src = state.champion?.avatar_url || "";
     elements.summaryChampionAvatar.alt = state.champion?.name || "";
     elements.summaryChampionMeta.textContent = "这是你在本局题目下最后留下的角色。";
+  }
+}
+
+function recordCharacters() {
+  if (state.gameCharacters.length) return state.gameCharacters;
+  return [...state.eliminated, state.champion].filter(Boolean);
+}
+
+function downloadFile(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function safeFilenamePart(value, fallback) {
+  const cleaned = String(value || fallback)
+    .replace(/[\\/:*?"<>|\x00-\x1F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned || fallback;
+}
+
+function exportFilename(extension, page = "") {
+  const username = safeFilenamePart(state.user?.username || "游客", "游客");
+  const questionIndex = QUESTION_BANK.findIndex((item) => item.id === state.question?.id);
+  const questionNumber = questionIndex >= 0
+    ? String(questionIndex + 1).padStart(2, "0")
+    : safeFilenamePart(state.question?.id || "自定义", "自定义").replace(/^custom_/, "自定义");
+  return `提瓦特心选_${username}_题目${questionNumber}${page ? `_${page}` : ""}.${extension}`;
+}
+
+function exportCsv() {
+  const rows = recordCharacters().map((character, index) => [
+    index + 1,
+    character.name,
+    state.notes[character.id] || "",
+  ]);
+  const escapeCell = (value) => `"${String(value).replaceAll('"', '""')}"`;
+  const csv = [
+    ["提瓦特心选记录", "", ""],
+    ["题目", state.question?.prompt || "", ""],
+    [],
+    ["序号", "角色", "评价"],
+    ...rows,
+  ].map((row) => row.map(escapeCell).join(",")).join("\r\n");
+  downloadFile(new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8" }), exportFilename("csv"));
+  elements.exportRecordMsg.textContent = "表格已开始下载";
+}
+
+function loadExportImage(character) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`无法加载 ${character.name} 的图片`));
+    image.src = character.avatar_url;
+  });
+}
+
+function wrapCanvasText(context, text, maxWidth) {
+  const characters = [...String(text || "")];
+  const lines = [];
+  let line = "";
+  for (const character of characters) {
+    const next = line + character;
+    if (line && context.measureText(next).width > maxWidth) {
+      lines.push(line);
+      line = character;
+    } else {
+      line = next;
+    }
+  }
+  if (line || !lines.length) lines.push(line);
+  return lines;
+}
+
+async function exportImage() {
+  const characters = recordCharacters();
+  if (!characters.length) return;
+  elements.exportImageBtn.disabled = true;
+  elements.exportRecordMsg.textContent = "正在生成图片...";
+  try {
+    const width = 1200;
+    const rowHeight = 166;
+    const headerHeight = 208;
+    const scale = 2;
+    const maxRowsPerPage = 20;
+    const images = await Promise.all(characters.map((character) => loadExportImage(character)));
+    const pageCount = Math.ceil(characters.length / maxRowsPerPage);
+
+    for (let pageIndex = 0; pageIndex < pageCount; pageIndex += 1) {
+      const start = pageIndex * maxRowsPerPage;
+      const pageCharacters = characters.slice(start, start + maxRowsPerPage);
+      const canvas = document.createElement("canvas");
+      canvas.width = width * scale;
+      canvas.height = (headerHeight + pageCharacters.length * rowHeight + 42) * scale;
+      const context = canvas.getContext("2d");
+      context.scale(scale, scale);
+      context.fillStyle = "#f5faf9";
+      context.fillRect(0, 0, width, canvas.height / scale);
+      context.fillStyle = "#24343d";
+      context.fillRect(0, 0, width, 14);
+      context.fillStyle = "#24343d";
+      context.font = "700 42px system-ui, sans-serif";
+      context.fillText("提瓦特心选记录", 66, 76);
+      context.fillStyle = "#637983";
+      context.font = "22px system-ui, sans-serif";
+      const questionLines = wrapCanvasText(context, state.question?.prompt || "本局记录", 1000);
+      questionLines.slice(0, 2).forEach((line, index) => context.fillText(line, 68, 124 + index * 30));
+      context.fillStyle = "#d6544d";
+      context.font = "600 17px system-ui, sans-serif";
+      context.fillText(
+        `共 ${characters.length} 位角色 · 第 ${pageIndex + 1} / ${pageCount} 页 · ${new Date().toLocaleDateString("zh-CN")}`,
+        68,
+        188,
+      );
+
+      pageCharacters.forEach((character, pageRowIndex) => {
+        const index = start + pageRowIndex;
+        const y = headerHeight + pageRowIndex * rowHeight;
+        context.fillStyle = index % 2 ? "#ffffff" : "#ecf8f5";
+        context.fillRect(42, y, width - 84, rowHeight - 14);
+        context.strokeStyle = "#cfe0e2";
+        context.strokeRect(42, y, width - 84, rowHeight - 14);
+        const image = images[index];
+        const imageSize = 144;
+        const imageX = 58;
+        const imageY = y + 3;
+        context.fillStyle = "#ffffff";
+        context.fillRect(imageX, imageY, imageSize, imageSize);
+        const imageScale = Math.min(imageSize / image.naturalWidth, imageSize / image.naturalHeight);
+        const drawWidth = image.naturalWidth * imageScale;
+        const drawHeight = image.naturalHeight * imageScale;
+        context.drawImage(image, imageX + (imageSize - drawWidth) / 2, imageY + (imageSize - drawHeight) / 2, drawWidth, drawHeight);
+        context.fillStyle = "#24343d";
+        context.font = "700 26px system-ui, sans-serif";
+        context.fillText(`${index + 1}. ${character.name}`, 230, y + 48);
+        context.fillStyle = "#637983";
+        context.font = "21px system-ui, sans-serif";
+        const note = state.notes[character.id] || "未记录评价";
+        wrapCanvasText(context, note, 850).slice(0, 3).forEach((line, lineIndex) => {
+          context.fillText(line, 230, y + 84 + lineIndex * 28);
+        });
+      });
+
+      const blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+      if (!blob) throw new Error("图片生成失败");
+      const pageSuffix = pageCount > 1 ? String(pageIndex + 1).padStart(2, "0") : "";
+      downloadFile(blob, exportFilename("png", pageSuffix));
+    }
+    elements.exportRecordMsg.textContent = pageCount > 1 ? `图片已开始下载，共 ${pageCount} 张` : "图片已开始下载";
+  } catch (error) {
+    elements.exportRecordMsg.textContent = error.message;
+  } finally {
+    elements.exportImageBtn.disabled = false;
   }
 }
 
@@ -516,16 +908,78 @@ function formatApiError(payload) {
   return payload?.message || "请求失败";
 }
 
-function applyChallenge(data) {
-  const byId = new Map(state.characters.map((item) => [item.id, item]));
-  const selected = data.character_ids.map((id) => byId.get(id)).filter(Boolean);
-  if (selected.length !== data.character_ids.length) {
-    throw new Error("挑战中的角色素材不完整，请重新创建挑战");
+function questionFromApi(item) {
+  return {
+    id: customQuestionId(item.id),
+    prompt: item.prompt,
+    custom: true,
+    creator: item.creator,
+  };
+}
+
+async function loadCustomQuestions() {
+  const questions = await api("/api/questions");
+  for (const item of questions) {
+    const question = questionFromApi(item);
+    if (!QUESTION_BANK.some((existing) => existing.id === question.id)) {
+      QUESTION_BANK.push(question);
+    }
+  }
+}
+
+async function addCustomQuestion() {
+  const prompt = elements.customQuestionInput.value.replace(/\s+/g, " ").trim();
+  if (!state.user) {
+    elements.customQuestionMsg.textContent = "请先登录，再添加自定义题目";
+    return;
+  }
+  if (isGuessMode() || state.pendingChallenge) return;
+  if (prompt.length < 4) {
+    elements.customQuestionMsg.textContent = "题目至少需要 4 个字符";
+    return;
+  }
+  if (QUESTION_BANK.some((item) => item.prompt.toLocaleLowerCase() === prompt.toLocaleLowerCase())) {
+    elements.customQuestionMsg.textContent = "这道题已经在题库中了";
+    return;
   }
 
+  state.questionSubmitting = true;
+  renderSetup();
+  elements.customQuestionMsg.textContent = "正在加入题库...";
+  try {
+    const created = await api("/api/questions", {
+      method: "POST",
+      body: { prompt },
+    });
+    const question = questionFromApi(created);
+    QUESTION_BANK.push(question);
+    state.question = question;
+    fillQuestionOptions();
+    elements.questionSelect.value = question.id;
+    elements.customQuestionInput.value = "";
+    elements.customQuestionMsg.textContent = "已加入题库并自动选中";
+    renderQuestion();
+  } catch (error) {
+    elements.customQuestionMsg.textContent = error.message;
+  } finally {
+    state.questionSubmitting = false;
+    renderSetup();
+  }
+}
+
+function applyChallenge(data) {
+  const byId = new Map(state.characters.map((item) => [item.id, item]));
+  const loaded = data.character_ids.map((id) => byId.get(id)).filter(Boolean);
+  if (loaded.length !== data.character_ids.length) {
+    throw new Error("挑战中的角色素材不完整，请重新创建挑战");
+  }
+  const selected = isGuessMode(data.mode)
+    ? loaded.filter((item) => !GUESS_EXCLUDED_NAMES.has(item.name))
+    : loaded;
+
   state.mode = data.mode;
-  state.question = data.mode === "guess"
-    ? GUESS_QUESTION
+  state.question = isGuessMode(data.mode)
+    ? questionForMode(data.mode)
     : QUESTION_BANK.find((item) => item.id === data.question_id) || {
         id: data.question_id || "shared_question",
         prompt: data.question_prompt,
@@ -538,6 +992,8 @@ function applyChallenge(data) {
   state.guessFeedback = "";
   state.guessCorrect = 0;
   state.guessIndex = 0;
+  state.notes = {};
+  state.gameCharacters = selected;
   clearWinnerBanner();
   updateUrlForChallenge(data.code);
 
@@ -585,11 +1041,15 @@ function restoreGameState() {
     const byId = new Map(state.characters.map((item) => [item.id, item]));
     const selectedQuestion = QUESTION_BANK.find((item) => item.id === saved.questionId);
     state.mode = MODE_META[saved.mode] ? saved.mode : "quick";
-    state.question = state.mode === "guess"
-      ? GUESS_QUESTION
+    state.question = isGuessMode(state.mode)
+      ? questionForMode(state.mode)
       : selectedQuestion || { id: saved.questionId || "saved_question", prompt: saved.questionPrompt || "" };
     state.challengeCode = saved.challengeCode || "";
     state.queue = (saved.queue || []).map((id) => byId.get(id)).filter(Boolean);
+    state.gameCharacters = (saved.gameCharacters || [])
+      .map((id) => byId.get(id))
+      .filter(Boolean);
+    state.notes = saved.notes && typeof saved.notes === "object" ? saved.notes : {};
     state.champion = saved.champion ? byId.get(saved.champion) || null : null;
     state.challenger = saved.challenger ? byId.get(saved.challenger) || null : null;
     state.eliminated = (saved.eliminated || []).map((id) => byId.get(id)).filter(Boolean);
@@ -617,8 +1077,8 @@ async function loadChallengeFromUrl() {
   state.pendingChallenge = data;
   state.challengeCode = data.code;
   state.mode = data.mode;
-  state.question = data.mode === "guess"
-    ? GUESS_QUESTION
+  state.question = isGuessMode(data.mode)
+    ? questionForMode(data.mode)
     : QUESTION_BANK.find((item) => item.id === data.question_id) || {
         id: data.question_id || "shared_question",
         prompt: data.question_prompt,
@@ -634,6 +1094,9 @@ async function loadBattle() {
   state.backend = data.backend;
   state.user = data.user;
   state.characters = data.characters;
+  await loadCustomQuestions().catch((error) => {
+    elements.customQuestionMsg.textContent = `自定义题库加载失败：${error.message}`;
+  });
   fillQuestionOptions();
   renderBackend();
   renderUser();
@@ -745,12 +1208,38 @@ async function choose(side) {
 
 function guessOptions(current, index) {
   const random = seededRandom(`${state.challengeCode}:${index}`);
-  const others = state.characters.filter((item) => item.id !== current.id);
-  return shuffle([current, ...shuffle(others, random).slice(0, 3)], random);
+  const others = state.characters.filter(
+    (item) => item.id !== current.id && !GUESS_EXCLUDED_NAMES.has(item.name),
+  );
+  return shuffle([current, ...shuffle(others, random).slice(0, 7)], random);
 }
 
-async function loadSilhouette(character) {
-  if (SILHOUETTE_CACHE.has(character.id)) return SILHOUETTE_CACHE.get(character.id);
+function applyObscuringMask(context, width, height, seed) {
+  const columns = 6;
+  const rows = 5;
+  const cells = Array.from({ length: columns * rows }, (_, index) => index);
+  const hiddenCells = shuffle(cells, seededRandom(seed)).slice(0, 9);
+  const cellWidth = width / columns;
+  const cellHeight = height / rows;
+
+  for (const cell of hiddenCells) {
+    const column = cell % columns;
+    const row = Math.floor(cell / columns);
+    context.clearRect(
+      Math.floor(column * cellWidth),
+      Math.floor(row * cellHeight),
+      Math.ceil(cellWidth) + 1,
+      Math.ceil(cellHeight) + 1,
+    );
+  }
+}
+
+async function loadSilhouette(character, index) {
+  const hardMode = isHardGuessMode();
+  const cacheKey = hardMode
+    ? `${character.id}:hard:${state.challengeCode}:${index}`
+    : `${character.id}:normal`;
+  if (SILHOUETTE_CACHE.has(cacheKey)) return SILHOUETTE_CACHE.get(cacheKey);
 
   const promise = new Promise((resolve, reject) => {
     const image = new Image();
@@ -813,6 +1302,14 @@ async function loadSilhouette(character) {
         }
 
         context.putImageData(pixels, 0, 0);
+        if (hardMode) {
+          applyObscuringMask(
+            context,
+            canvas.width,
+            canvas.height,
+            `${state.challengeCode}:${index}:${character.id}:mask`,
+          );
+        }
         resolve(canvas.toDataURL("image/png"));
       } catch (error) {
         reject(error);
@@ -822,22 +1319,32 @@ async function loadSilhouette(character) {
     image.src = character.avatar_url;
   });
 
-  SILHOUETTE_CACHE.set(character.id, promise);
+  SILHOUETTE_CACHE.set(cacheKey, promise);
   return promise;
 }
 
 function renderGuess() {
   const current = state.guessItems[state.guessIndex];
   if (!current) return;
+  const imageKey = `${state.mode}:${state.challengeCode}:${state.guessIndex}:${current.id}`;
+  if (elements.guessAvatar.dataset.guessKey !== imageKey) {
+    elements.guessAvatar.dataset.guessKey = imageKey;
+    elements.guessAvatar.removeAttribute("src");
+    elements.guessAvatar.classList.remove("image-arrive");
+  }
 
   elements.guessRoundLabel.textContent = `第 ${state.guessIndex + 1} / ${state.guessItems.length} 题`;
+  elements.guessTitle.textContent = isHardGuessMode() ? "困难剪影挑战" : "证件照猜角色";
   elements.guessFeedback.textContent = state.guessFeedback;
+  elements.guessSection.classList.toggle("is-answering", state.busy);
+  elements.guessAvatar.classList.toggle("is-revealed", state.busy);
+  if (state.busy) elements.guessAvatar.classList.remove("image-arrive");
   elements.guessOptions.innerHTML = state.busy
     ? ""
     : guessOptions(current, state.guessIndex)
         .map(
-          (item) => `
-            <button class="guess-option" type="button" data-guess-id="${item.id}">
+          (item, optionIndex) => `
+            <button class="guess-option" style="--option-index: ${optionIndex}" type="button" data-guess-id="${item.id}">
               ${escapeHtml(item.name)}
             </button>
           `,
@@ -848,11 +1355,21 @@ function renderGuess() {
     button.addEventListener("click", () => chooseGuess(Number(button.dataset.guessId)));
   });
 
+  if (state.busy) {
+    elements.guessAvatar.src = current.avatar_url;
+    elements.guessAvatar.alt = `${current.name}的彩色证件照`;
+    return;
+  }
+
   const currentId = current.id;
-  loadSilhouette(current)
+  elements.guessAvatar.alt = "角色剪影";
+  loadSilhouette(current, state.guessIndex)
     .then((url) => {
-      if (state.started && !state.completed && state.guessItems[state.guessIndex]?.id === currentId) {
+      if (state.started && !state.completed && !state.busy && state.guessItems[state.guessIndex]?.id === currentId) {
         elements.guessAvatar.src = url;
+        elements.guessAvatar.classList.remove("image-arrive");
+        void elements.guessAvatar.offsetWidth;
+        elements.guessAvatar.classList.add("image-arrive");
       }
     })
     .catch(() => {
@@ -868,7 +1385,7 @@ function chooseGuess(characterId) {
   state.busy = true;
   const correct = characterId === current.id;
   if (correct) state.guessCorrect += 1;
-  state.guessFeedback = correct ? "猜对了" : `答案是 ${current.name}`;
+  state.guessFeedback = correct ? `猜对了，这是 ${current.name}` : `答案是 ${current.name}`;
   renderBattle();
 
   window.setTimeout(() => {
@@ -888,7 +1405,7 @@ function chooseGuess(characterId) {
     }
     renderBattle();
     renderSummary();
-  }, 650);
+  }, 1000);
 }
 
 async function authenticate(mode) {
@@ -944,6 +1461,8 @@ function resetGameState() {
   state.guessFeedback = "";
   state.started = false;
   state.completed = false;
+  state.notes = {};
+  state.gameCharacters = [];
   clearGameState();
   clearWinnerBanner();
   renderSetup();
@@ -974,10 +1493,71 @@ function wireEvents() {
     state.question = selectedQuestion();
     renderQuestion();
   });
+  elements.addQuestionBtn.addEventListener("click", () => addCustomQuestion());
+  elements.customQuestionInput.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") addCustomQuestion();
+  });
   elements.startBtn.addEventListener("click", () => startFreshGame());
-  elements.leftCard.addEventListener("click", () => choose("left"));
-  elements.rightCard.addEventListener("click", () => choose("right"));
+  elements.leftCard.addEventListener("click", (event) => {
+    if (!event.target.closest("textarea")) choose("left");
+  });
+  elements.rightCard.addEventListener("click", (event) => {
+    if (!event.target.closest("textarea")) choose("right");
+  });
+  elements.leftCard.addEventListener("keydown", (event) => {
+    if ((event.key === "Enter" || event.key === " ") && event.target === elements.leftCard) {
+      event.preventDefault();
+      choose("left");
+    }
+  });
+  elements.rightCard.addEventListener("keydown", (event) => {
+    if ((event.key === "Enter" || event.key === " ") && event.target === elements.rightCard) {
+      event.preventDefault();
+      choose("right");
+    }
+  });
+  const bindChoiceNote = (noteElement) => {
+    noteElement.addEventListener("click", (event) => event.stopPropagation());
+    noteElement.addEventListener("keydown", (event) => event.stopPropagation());
+    noteElement.addEventListener("input", () => {
+      const characterId = Number(noteElement.dataset.characterId);
+      if (!characterId) return;
+      state.notes[characterId] = noteElement.value;
+      saveGameState();
+    });
+  };
+  bindChoiceNote(elements.leftNote);
+  bindChoiceNote(elements.rightNote);
   elements.shareChallengeBtn.addEventListener("click", () => shareChallenge());
+  elements.exportImageBtn.addEventListener("click", () => exportImage());
+  elements.exportCsvBtn.addEventListener("click", () => exportCsv());
+  elements.musicDiscBtn.addEventListener("click", () => setMusicPanel(!musicState.panelOpen));
+  elements.musicCloseBtn.addEventListener("click", () => setMusicPanel(false));
+  elements.musicPlayBtn.addEventListener("click", toggleMusic);
+  elements.musicPanelPlayBtn.addEventListener("click", toggleMusic);
+  elements.musicPrevBtn.addEventListener("click", () => selectMusicTrack(musicState.trackIndex - 1));
+  elements.musicNextBtn.addEventListener("click", () => selectMusicTrack(musicState.trackIndex + 1));
+  elements.musicVolume.addEventListener("input", () => {
+    musicState.volume = Number(elements.musicVolume.value);
+    localStorage.setItem(MUSIC_VOLUME_KEY, String(musicState.volume));
+    if (musicState.audio) musicState.audio.volume = musicState.volume / 100;
+  });
+  elements.musicProgress.addEventListener("input", () => {
+    if (!musicState.audio || !Number.isFinite(musicState.audio.duration)) return;
+    musicState.audio.currentTime = Number(elements.musicProgress.value);
+    elements.musicCurrentTime.textContent = formatMusicTime(musicState.audio.currentTime);
+  });
+  document.addEventListener("click", (event) => {
+    if (!musicState.panelOpen) return;
+    const eventPath = event.composedPath();
+    const clickedPlayer = eventPath.includes(elements.musicPanel)
+      || eventPath.some((node) => node?.classList?.contains("music-dock"));
+    if (clickedPlayer) return;
+    setMusicPanel(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && musicState.panelOpen) setMusicPanel(false);
+  });
 }
 
 function bootstrap() {
@@ -990,6 +1570,7 @@ function bootstrap() {
   renderBattle();
   renderEliminated();
   renderSummary();
+  renderMusicPlayer();
   hydrateIcons().catch(() => {});
   loadUser()
     .then(loadBattle)

@@ -6,9 +6,9 @@
     <title>提瓦特心选</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-    <link rel="stylesheet" href="/static/css/app.css" />
+    <link rel="stylesheet" href="/static/css/app.css?v=20261007-6" />
   </head>
-  <body class="min-h-screen text-slate-100">
+  <body class="min-h-screen text-slate-900">
     <div class="page-backdrop"></div>
     <canvas id="confetti-canvas" class="fixed inset-0 pointer-events-none z-50"></canvas>
 
@@ -21,9 +21,21 @@
       <div class="topbar-meta">
         <div id="backendBadge" class="status-pill">连接中</div>
         <div id="userChip" class="status-pill">未登录</div>
-        <div class="icon-belt" aria-hidden="true">
-          <span class="icon-badge"><span class="icon-slot" data-icon="sparkles"></span></span>
-          <span class="icon-badge"><span class="icon-slot" data-icon="crown"></span></span>
+        <div class="music-dock">
+          <button
+            id="musicDiscBtn"
+            class="music-disc-button"
+            type="button"
+            aria-label="打开音乐播放器"
+            aria-expanded="false"
+            aria-controls="musicPanel"
+            title="音乐播放器"
+          >
+            <span class="music-disc-center"><span class="icon-slot" data-icon="music"></span></span>
+          </button>
+          <button id="musicPlayBtn" class="music-transport-button" type="button" aria-label="播放音乐" title="播放音乐">
+            <span id="musicPlayIcon" class="icon-slot" data-icon="play"></span>
+          </button>
         </div>
         <button id="logoutBtn" class="soft-button">
           <span class="icon-slot icon-inline" data-icon="log-out"></span>
@@ -31,6 +43,55 @@
         </button>
       </div>
     </header>
+
+    <section id="musicPanel" class="music-panel hidden" aria-hidden="true" aria-label="音乐播放器">
+      <div class="music-panel-head">
+        <div>
+          <div class="eyebrow">旅途音乐</div>
+          <h2>播放列表</h2>
+        </div>
+        <button id="musicCloseBtn" class="music-icon-button" type="button" aria-label="关闭音乐播放器" title="关闭">
+          <span class="icon-slot" data-icon="x"></span>
+        </button>
+      </div>
+
+      <div class="music-now-playing">
+        <div id="musicPanelDisc" class="music-panel-disc">
+          <span class="icon-slot" data-icon="music"></span>
+        </div>
+        <div class="music-track-copy">
+          <div id="musicTrackName" class="music-track-name"></div>
+          <div id="musicTrackMood" class="music-track-mood"></div>
+        </div>
+        <div id="musicEqualizer" class="music-equalizer" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </div>
+
+      <div class="music-progress-row">
+        <span id="musicCurrentTime" class="music-time">0:00</span>
+        <input id="musicProgress" class="music-progress" type="range" min="0" max="0" step="0.1" value="0" aria-label="音乐播放进度" />
+        <span id="musicDuration" class="music-time">0:00</span>
+      </div>
+
+      <div class="music-controls">
+        <button id="musicPrevBtn" class="music-icon-button" type="button" aria-label="上一首" title="上一首">
+          <span class="icon-slot" data-icon="skip-back"></span>
+        </button>
+        <button id="musicPanelPlayBtn" class="music-main-button" type="button" aria-label="播放音乐" title="播放音乐">
+          <span id="musicPanelPlayIcon" class="icon-slot" data-icon="play"></span>
+        </button>
+        <button id="musicNextBtn" class="music-icon-button" type="button" aria-label="下一首" title="下一首">
+          <span class="icon-slot" data-icon="skip-forward"></span>
+        </button>
+        <label class="music-volume" title="音量">
+          <span class="icon-slot" data-icon="volume-2"></span>
+          <input id="musicVolume" type="range" min="0" max="100" step="1" aria-label="音乐音量" />
+        </label>
+      </div>
+
+      <div id="musicPlaylist" class="music-playlist"></div>
+    </section>
 
     <div class="app-shell">
       <aside class="sidebar-panel panel">
@@ -95,6 +156,10 @@
                 <span class="mode-option-title">证件照猜角色</span>
                 <span class="mode-option-note">10 道剪影题</span>
               </button>
+              <button class="mode-option mode-option-hard" type="button" data-mode="guess_hard" aria-pressed="false">
+                <span class="mode-option-title">困难剪影挑战</span>
+                <span class="mode-option-note">10 道题 · 随机遮挡 30%</span>
+              </button>
             </div>
           </section>
 
@@ -106,6 +171,19 @@
               </div>
             </div>
             <select id="questionSelect" class="panel-input question-select" aria-label="选择题目"></select>
+            <div id="customQuestionPanel" class="custom-question-panel">
+              <div class="custom-question-row">
+                <input
+                  id="customQuestionInput"
+                  class="panel-input"
+                  maxlength="80"
+                  placeholder="输入新的心选题目"
+                  aria-label="自定义题目"
+                />
+                <button id="addQuestionBtn" class="soft-button custom-question-button" type="button">加入题库</button>
+              </div>
+              <p id="customQuestionMsg" class="section-note custom-question-msg"></p>
+            </div>
           </section>
 
           <section class="panel soft-panel">
@@ -133,7 +211,7 @@
                 <span class="phase-index">1</span>
                 <div>
                   <div class="phase-title">选择玩法</div>
-                  <div class="phase-desc">快速、标准、完整或猜角色</div>
+                  <div class="phase-desc">快速、标准、完整、猜角色或困难挑战</div>
                 </div>
               </div>
               <div class="phase-item">
@@ -204,19 +282,21 @@
           </div>
 
           <div class="choice-grid">
-            <button id="leftCard" class="choice-card text-left" type="button">
+            <div id="leftCard" class="choice-card text-left" role="button" tabindex="0">
               <img id="leftAvatar" class="choice-avatar" alt="" />
               <div class="choice-copy">
                 <h3 id="leftName" class="choice-name"></h3>
+                <textarea id="leftNote" class="choice-note" rows="2" maxlength="240" placeholder="记录你的评价" aria-label="记录左侧角色评价"></textarea>
               </div>
-            </button>
+            </div>
 
-            <button id="rightCard" class="choice-card text-left" type="button">
+            <div id="rightCard" class="choice-card text-left" role="button" tabindex="0">
               <img id="rightAvatar" class="choice-avatar" alt="" />
               <div class="choice-copy">
                 <h3 id="rightName" class="choice-name"></h3>
+                <textarea id="rightNote" class="choice-note" rows="2" maxlength="240" placeholder="记录你的评价" aria-label="记录右侧角色评价"></textarea>
               </div>
-            </button>
+            </div>
           </div>
 
           <div id="winnerBanner" class="mt-4 hidden winner-banner"></div>
@@ -225,7 +305,7 @@
         <section id="guessSection" class="hidden panel">
           <div class="section-head">
             <div>
-              <h2 class="section-title">证件照猜角色</h2>
+              <h2 id="guessTitle" class="section-title">证件照猜角色</h2>
               <p id="guessRoundLabel" class="section-note">准备开始</p>
             </div>
             <div id="guessFeedback" class="section-note text-right"></div>
@@ -295,10 +375,28 @@
             <input id="shareChallengeUrl" class="panel-input share-challenge-url" readonly aria-label="挑战链接" />
             <span id="shareChallengeMsg" class="section-note"></span>
           </div>
+          <div id="exportRecordPanel" class="export-record-panel">
+            <div class="summary-label summary-label-accent">导出本局记录</div>
+            <p class="section-note export-record-note">把本局角色和你写下的评价保存下来。</p>
+            <div class="export-record-actions">
+              <button id="exportImageBtn" class="soft-button" type="button">导出图片</button>
+              <button id="exportCsvBtn" class="soft-button" type="button">导出表格</button>
+            </div>
+            <span id="exportRecordMsg" class="section-note"></span>
+          </div>
         </section>
       </aside>
     </div>
 
-    <script type="module" src="/static/js/app.js"></script>
+    <footer class="site-footer">
+      <span>
+        本网站为<strong>个人非商用学习项目</strong>，仅用于个人技术演示与兴趣展示，无任何收费、广告、引流、售卖等盈利行为。
+        页面中使用的《原神》相关角色名称、美术图片、背景音乐，知识产权均归属米哈游（HoYoverse）。
+        本项目与米哈游无任何关联，不属于官方作品，也未获得官方商业授权。
+        如权利人提出要求，我将立即移除相关素材。
+      </span>
+    </footer>
+
+    <script type="module" src="/static/js/app.js?v=20261007-6"></script>
   </body>
 </html>

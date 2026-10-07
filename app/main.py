@@ -12,6 +12,7 @@ import app.db.session as db_session
 from app.routers.auth import router as auth_router
 from app.routers.battle import router as battle_router
 from app.routers.challenges import router as challenges_router
+from app.routers.questions import router as questions_router
 from app.routers.ranking import router as ranking_router
 from app.services.seed_service import seed_characters
 from app.db.session import session_scope
@@ -35,6 +36,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 app.include_router(auth_router)
 app.include_router(battle_router)
 app.include_router(challenges_router)
+app.include_router(questions_router)
 app.include_router(ranking_router)
 
 
@@ -60,4 +62,7 @@ def health():
 
 @app.get("/")
 def index():
-    return FileResponse(STATIC_DIR / "index.html")
+    return FileResponse(
+        STATIC_DIR / "index.html",
+        headers={"Cache-Control": "no-store"},
+    )
