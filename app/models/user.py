@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Column, DateTime, Integer, String
+from sqlalchemy import Boolean, Column, DateTime, Integer, String
 
 from app.db.base import Base
 
@@ -14,5 +14,6 @@ class User(Base):
     username = Column(String(64), nullable=False, unique=True, index=True)
     password_hash = Column(String(256), nullable=False)
     level = Column(Integer, nullable=False, default=1)
+    is_admin = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 

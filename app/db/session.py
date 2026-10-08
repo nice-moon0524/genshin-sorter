@@ -78,6 +78,11 @@ def init_schema() -> None:
                         "ALTER TABLE characters ADD COLUMN championships INTEGER NOT NULL DEFAULT 0"
                     )
                 )
+    if "users" in inspector.get_table_names():
+        columns = {column["name"] for column in inspector.get_columns("users")}
+        if "is_admin" not in columns:
+            with engine.begin() as connection:
+                connection.execute(text("ALTER TABLE users ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT 0"))
 
 
 @contextmanager

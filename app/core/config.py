@@ -25,6 +25,8 @@ class Settings:
 
     cors_origins: str = os.getenv("CORS_ORIGINS", "*")
     secret_key: str = os.getenv("SECRET_KEY", "dev-secret-key-change-me")
+    admin_username: str = os.getenv("ADMIN_USERNAME", "").strip()
+    admin_password: str = os.getenv("ADMIN_PASSWORD", "")
 
     def mysql_url(self) -> str:
         from urllib.parse import quote_plus

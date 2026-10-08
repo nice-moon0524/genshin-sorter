@@ -6,7 +6,7 @@
     <title>提瓦特心选</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
-    <link rel="stylesheet" href="/static/css/app.css?v=20261007-6" />
+    <link rel="stylesheet" href="/static/css/app.css?v=20261008-1" />
   </head>
   <body class="min-h-screen text-slate-900">
     <div class="page-backdrop"></div>
@@ -21,6 +21,7 @@
       <div class="topbar-meta">
         <div id="backendBadge" class="status-pill">连接中</div>
         <div id="userChip" class="status-pill">未登录</div>
+        <button id="adminBtn" class="soft-button hidden" type="button">管理</button>
         <div class="music-dock">
           <button
             id="musicDiscBtn"
@@ -91,6 +92,27 @@
       </div>
 
       <div id="musicPlaylist" class="music-playlist"></div>
+    </section>
+
+    <section id="adminPanel" class="admin-panel hidden" aria-hidden="true" aria-label="管理面板">
+      <div class="admin-panel-head">
+        <div>
+          <div class="eyebrow">管理员</div>
+          <h2>游玩概览</h2>
+        </div>
+        <button id="adminCloseBtn" class="music-icon-button" type="button" aria-label="关闭管理面板" title="关闭">
+          <span class="icon-slot" data-icon="x"></span>
+        </button>
+      </div>
+      <div id="adminStats" class="admin-stats"></div>
+      <div class="admin-section-head">
+        <h3>最近游玩记录</h3>
+        <button id="adminRefreshBtn" class="soft-button" type="button">刷新</button>
+      </div>
+      <div id="adminRecords" class="admin-list"></div>
+      <div class="admin-section-head"><h3>注册用户</h3></div>
+      <div id="adminUsers" class="admin-list"></div>
+      <p id="adminMsg" class="section-note"></p>
     </section>
 
     <div class="app-shell">
@@ -397,6 +419,6 @@
       </span>
     </footer>
 
-    <script type="module" src="/static/js/app.js?v=20261007-6"></script>
+    <script type="module" src="/static/js/app.js?v=20261008-1"></script>
   </body>
 </html>

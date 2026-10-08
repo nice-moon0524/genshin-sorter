@@ -30,7 +30,7 @@ def issue_user_token(user: User) -> str:
 
 
 def user_payload(user: User) -> dict:
-    return {"id": user.id, "username": user.username, "level": user.level}
+    return {"id": user.id, "username": user.username, "level": user.level, "is_admin": bool(user.is_admin)}
 
 
 def resolve_current_user(session: Session, authorization: str | None) -> User | None:
@@ -50,4 +50,11 @@ def current_user_required(session: Session, authorization: str | None) -> User:
     user = resolve_current_user(session, authorization)
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="请先登录")
+    return user
+
+
+def admin_user_required(session: Session, authorization: str | None) -> User:
+    user = current_user_required(session, authorization)
+    if not user.is_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="需要管理员权限")
     return user

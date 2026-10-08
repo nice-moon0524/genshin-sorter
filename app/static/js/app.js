@@ -2,6 +2,7 @@ const TOKEN_KEY = "genshin_sorter_token";
 const SAVE_KEY = "genshin_sorter_state";
 const MUSIC_TRACK_KEY = "genshin_sorter_music_track";
 const MUSIC_VOLUME_KEY = "genshin_sorter_music_volume";
+const VISITOR_KEY = "genshin_sorter_visitor_id";
 
 const MUSIC_TRACKS = [
   { name: "皎洁的笑颜", mood: "Moonlike Smile · HOYO-MiX", src: "/static/music/track-01.ogg" },
@@ -103,6 +104,14 @@ const musicState = {
   panelOpen: false,
 };
 
+function randomId(prefix) {
+  const value = window.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${value}`;
+}
+
+const visitorId = localStorage.getItem(VISITOR_KEY) || randomId("guest");
+localStorage.setItem(VISITOR_KEY, visitorId);
+
 const state = {
   token: localStorage.getItem(TOKEN_KEY) || "",
   user: null,
@@ -126,6 +135,8 @@ const state = {
   busy: false,
   started: false,
   completed: false,
+  playRecordKey: "",
+  playRecordSubmitted: false,
 };
 
 const $ = (id) => document.getElementById(id);
@@ -139,6 +150,14 @@ const elements = {
   loginBtn: $("loginBtn"),
   registerBtn: $("registerBtn"),
   logoutBtn: $("logoutBtn"),
+  adminBtn: $("adminBtn"),
+  adminPanel: $("adminPanel"),
+  adminCloseBtn: $("adminCloseBtn"),
+  adminRefreshBtn: $("adminRefreshBtn"),
+  adminStats: $("adminStats"),
+  adminRecords: $("adminRecords"),
+  adminUsers: $("adminUsers"),
+  adminMsg: $("adminMsg"),
   musicDiscBtn: $("musicDiscBtn"),
   musicPlayBtn: $("musicPlayBtn"),
   musicPlayIcon: $("musicPlayIcon"),
@@ -347,6 +366,7 @@ function saveGameState() {
       guessCorrect: state.guessCorrect,
       notes: state.notes,
       gameCharacters: state.gameCharacters.map((item) => item.id),
+      playRecordKey: state.playRecordKey,
     }),
   );
 }
@@ -527,6 +547,8 @@ function renderBackend() {
 function renderUser() {
   elements.userChip.textContent = state.user ? `用户：${state.user.username}` : "游客";
   elements.customQuestionInput.placeholder = state.user ? "输入新的心选题目" : "登录后可添加自定义题目";
+  elements.adminBtn.classList.toggle("hidden", !state.user?.is_admin);
+  if (!state.user?.is_admin) setAdminPanel(false);
 }
 
 function renderPlaceholderCard(img, nameEl) {
@@ -864,6 +886,86 @@ async function exportImage() {
   }
 }
 
+async function submitPlayRecord() {
+  if (state.playRecordSubmitted || !state.playRecordKey || !state.completed) return;
+  const resultSummary = isGuessMode()
+    ? `认出 ${state.guessCorrect} / ${state.guessItems.length} 位角色`
+    : `最终选择：${state.champion?.name || "未知"}`;
+  try {
+    await api("/api/plays", {
+      method: "POST",
+      body: {
+        record_key: state.playRecordKey,
+        visitor_id: visitorId,
+        mode: state.mode,
+        question_id: state.question?.id || null,
+        question_prompt: state.question?.prompt || "未命名题目",
+        result_summary: resultSummary,
+        challenge_code: state.challengeCode || null,
+      },
+    });
+    state.playRecordSubmitted = true;
+  } catch {
+    // Recording must not interrupt the game result screen.
+  }
+}
+
+function formatAdminDate(value) {
+  return new Intl.DateTimeFormat("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+}
+
+function renderAdminOverview(data) {
+  elements.adminStats.innerHTML = `
+    <div class="admin-stat"><strong>${data.registered_users}</strong><span>注册用户</span></div>
+    <div class="admin-stat"><strong>${data.guest_players}</strong><span>游客设备</span></div>
+    <div class="admin-stat"><strong>${data.total_plays}</strong><span>完成局数</span></div>
+  `;
+  elements.adminRecords.innerHTML = data.records.length
+    ? data.records.map((record) => `
+        <div class="admin-record">
+          <div class="admin-record-head">
+            <span class="admin-record-player">${escapeHtml(record.player_label)}</span>
+            <span class="admin-record-time">${formatAdminDate(record.created_at)}</span>
+          </div>
+          <div class="admin-record-meta">${escapeHtml(MODE_META[record.mode]?.label || record.mode)} · ${escapeHtml(record.question_prompt)}</div>
+          <div class="admin-record-result">${escapeHtml(record.result_summary)}</div>
+        </div>
+      `).join("")
+    : `<div class="section-note">暂无游玩记录</div>`;
+  elements.adminUsers.innerHTML = data.users.length
+    ? data.users.map((user) => `
+        <div class="admin-user-row">
+          <span class="admin-user-name">${escapeHtml(user.username)}${user.is_admin ? " · 管理员" : ""}</span>
+          <span class="admin-user-meta">等级 ${user.level} · ${user.play_count} 局</span>
+        </div>
+      `).join("")
+    : `<div class="section-note">暂无注册用户</div>`;
+}
+
+async function loadAdminOverview() {
+  if (!state.user?.is_admin) return;
+  elements.adminMsg.textContent = "正在加载...";
+  try {
+    const data = await api("/api/admin/overview");
+    renderAdminOverview(data);
+    elements.adminMsg.textContent = "";
+  } catch (error) {
+    elements.adminMsg.textContent = error.message;
+  }
+}
+
+function setAdminPanel(open) {
+  const visible = Boolean(open && state.user?.is_admin);
+  elements.adminPanel.classList.toggle("hidden", !visible);
+  elements.adminPanel.setAttribute("aria-hidden", String(!visible));
+  if (visible) loadAdminOverview();
+}
+
 function syncCharacterStats(updated) {
   const index = state.characters.findIndex((item) => item.id === updated.id);
   if (index >= 0) {
@@ -994,6 +1096,8 @@ function applyChallenge(data) {
   state.guessIndex = 0;
   state.notes = {};
   state.gameCharacters = selected;
+  state.playRecordKey = randomId("play");
+  state.playRecordSubmitted = false;
   clearWinnerBanner();
   updateUrlForChallenge(data.code);
 
@@ -1050,6 +1154,8 @@ function restoreGameState() {
       .map((id) => byId.get(id))
       .filter(Boolean);
     state.notes = saved.notes && typeof saved.notes === "object" ? saved.notes : {};
+    state.playRecordKey = saved.playRecordKey || randomId("play");
+    state.playRecordSubmitted = false;
     state.champion = saved.champion ? byId.get(saved.champion) || null : null;
     state.challenger = saved.challenger ? byId.get(saved.challenger) || null : null;
     state.eliminated = (saved.eliminated || []).map((id) => byId.get(id)).filter(Boolean);
@@ -1190,6 +1296,7 @@ async function choose(side) {
         spread: 76,
         origin: { y: 0.6 },
       });
+      await submitPlayRecord();
     } else {
       saveGameState();
     }
@@ -1400,6 +1507,7 @@ function chooseGuess(characterId) {
         spread: 72,
         origin: { y: 0.6 },
       });
+      submitPlayRecord();
     } else {
       saveGameState();
     }
@@ -1461,6 +1569,8 @@ function resetGameState() {
   state.guessFeedback = "";
   state.started = false;
   state.completed = false;
+  state.playRecordKey = "";
+  state.playRecordSubmitted = false;
   state.notes = {};
   state.gameCharacters = [];
   clearGameState();
@@ -1483,6 +1593,9 @@ function wireEvents() {
     elements.authMsg.textContent = "已退出，仍然可以游客开始";
     renderUser();
   });
+  elements.adminBtn.addEventListener("click", () => setAdminPanel(true));
+  elements.adminCloseBtn.addEventListener("click", () => setAdminPanel(false));
+  elements.adminRefreshBtn.addEventListener("click", () => loadAdminOverview());
   elements.modeOptions.forEach((button) => {
     button.addEventListener("click", () => {
       if (!state.pendingChallenge) setMode(button.dataset.mode);
@@ -1557,6 +1670,7 @@ function wireEvents() {
   });
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && musicState.panelOpen) setMusicPanel(false);
+    if (event.key === "Escape" && !elements.adminPanel.classList.contains("hidden")) setAdminPanel(false);
   });
 }
 

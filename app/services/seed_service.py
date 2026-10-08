@@ -13,6 +13,14 @@ from app.services.character_catalog import build_character_records
 def seed_characters(session: Session) -> None:
     count = session.execute(select(func.count(Character.id))).scalar_one()
     if count:
+        legacy_names = {"sikeke": "丝柯克", "Sikeke": "丝柯克"}
+        for old_name, corrected_name in legacy_names.items():
+            character = session.execute(select(Character).where(Character.name == old_name)).scalar_one_or_none()
+            duplicate = session.execute(select(Character).where(Character.name == corrected_name)).scalar_one_or_none()
+            if character and not duplicate:
+                character.name = corrected_name
+                character.avatar_url = "/static/avatars/%E4%B8%9D%E6%9F%AF%E5%85%8B.png"
+        session.flush()
         return
 
     avatars_dir = Path(__file__).resolve().parent.parent / "static" / "avatars"

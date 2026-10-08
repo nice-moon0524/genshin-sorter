@@ -226,6 +226,106 @@ body {
   animation: music-panel-enter 180ms ease-out both;
 }
 
+.admin-panel {
+  position: fixed;
+  z-index: 75;
+  top: 5.4rem;
+  right: max(1rem, calc((100vw - 1600px) / 2 + 1rem));
+  width: min(42rem, calc(100vw - 1.5rem));
+  max-height: calc(100vh - 6.4rem);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid #cddfe1;
+  border-top: 4px solid #3998c7;
+  border-radius: 0.85rem;
+  background: rgba(255, 255, 255, 0.99);
+  box-shadow: 0 24px 60px rgba(44, 82, 88, 0.22);
+  animation: music-panel-enter 180ms ease-out both;
+}
+
+.admin-panel-head,
+.admin-section-head,
+.admin-record-head,
+.admin-user-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.admin-panel-head h2,
+.admin-section-head h3 {
+  margin: 0.15rem 0 0;
+  color: var(--text);
+}
+
+.admin-panel-head h2 { font-size: 1.15rem; }
+.admin-section-head h3 { font-size: 0.92rem; }
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-top: 1rem;
+}
+
+.admin-stat {
+  padding: 0.75rem;
+  border: 1px solid #d5e3e5;
+  border-radius: 0.6rem;
+  background: #f6faf9;
+}
+
+.admin-stat strong,
+.admin-stat span { display: block; }
+.admin-stat strong { color: var(--text); font-size: 1.3rem; }
+.admin-stat span { color: var(--muted); font-size: 0.72rem; }
+
+.admin-section-head {
+  margin-top: 1rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid #dce8e9;
+}
+
+.admin-section-head .soft-button {
+  min-height: 2.15rem;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+}
+
+.admin-list {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.55rem;
+}
+
+.admin-record,
+.admin-user-row {
+  padding: 0.68rem 0.75rem;
+  border: 1px solid #dce8e9;
+  border-radius: 0.55rem;
+  background: #fbfdfd;
+}
+
+.admin-record-player,
+.admin-user-name { color: var(--text); font-weight: 700; }
+.admin-record-time,
+.admin-record-meta,
+.admin-user-meta { color: var(--muted); font-size: 0.74rem; }
+.admin-record-result { margin-top: 0.35rem; color: #31515a; font-size: 0.82rem; }
+
+@media (max-width: 520px) {
+  .admin-panel {
+    top: 0.75rem;
+    right: 0.75rem;
+    max-height: calc(100vh - 1.5rem);
+  }
+
+  .admin-stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @keyframes music-panel-enter {
   from {
     opacity: 0;
